@@ -9,52 +9,54 @@ const studySchema = z.object({
 
 export async function startStudy(request, db, corsHeaders) {
 	try {
-		const {
-			prolificid: prolific_userid,
-			studyid: prolific_studyid,
-			sessionid: prolific_sessionid
-		} = await request.json()
+		const { prolificid: prolific_userid, studyid: prolific_studyid, sessionid: prolific_sessionid } = await request.json()
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
 		if (!parseResult.success) {
-			return responseFailed(null, "Failed to parse prolificid, studyid, sessionid", 400, corsHeaders)
+			return responseFailed({}, "Failed to parse prolificid, studyid, sessionid", 400, corsHeaders)
 		}
 
 		const study = await db.prepare("SELECT * FROM studies WHERE status = 'new' OR status = 'uncomplete'").first()
 
 		if (!study || study.length === 0) {
-			return responseFailed(null, "No studies found", 404, corsHeaders)
+			return responseFailed({}, "No studies found", 404, corsHeaders)
 		}
+
+		if (study.length === 0) {
+			return responseSuccess({ state: "full" }, "All study is complete", 404, corsHeaders)
+		}
+
 		const res = await db
 			.prepare(
 				`UPDATE studies
-			SET status = 'started', prolific_userid = ?, prolific_studyid = ?, prolific_sessionid = ?
+			SET status = 'started', time_start = CURRENT_TIMESTAMP, prolific_userid = ?, prolific_studyid = ?, prolific_sessionid = ?
 			WHERE id = ?`
 			)
 			.bind(prolific_userid, prolific_studyid, prolific_sessionid, study.id)
 			.run()
 		if (!res) {
 			console.log("Response", res)
-			return responseFailed(null, "Failed to update study", 404, corsHeaders)
+			return responseFailed({}, "Failed to update study", 404, corsHeaders)
 		}
 
-		const pages = await fetchPagesForStudy(db, study.id)
-		if (!pages) {
-			return responseFailed(null, "Failed to fetch pages", 404, corsHeaders)
-		}
+		// const pages = await fetchPagesForStudy(db, study.id)
+		// if (!pages) {
+		// 	return responseFailed(null, "Failed to fetch pages", 404, corsHeaders)
+		// }
 
-		const pagesWithVideos = await fetchVideosForPages(db, pages)
-		if (!pagesWithVideos) {
-			return responseFailed(null, "Failed to fetch videos", 404, corsHeaders)
-		}
+		// const pagesWithVideos = await fetchVideosForPages(db, pages)
+		// if (!pagesWithVideos) {
+		// 	return responseFailed(null, "Failed to fetch videos", 404, corsHeaders)
+		// }
 
-		return responseSuccess(
-			{
-				...study,
-				pages: pagesWithVideos,
-			},
-			"Fetch studies success",
-			corsHeaders
-		)
+		// return responseSuccess(
+		// 	{
+		// 		...study,
+		// 		pages: pagesWithVideos,
+		// 	},
+		// 	"Fetch studies success",
+		// 	corsHeaders
+		// )
+		return responseSuccess({ state: "success", code: study.id }, "Start study success", corsHeaders)
 	} catch (err) {
 		console.error("Exception:", err)
 		return responseError(err, err.message || "An unknown error occurred", 500, corsHeaders)

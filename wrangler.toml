@@ -21,6 +21,7 @@ workers_dev = true
 # MY_VARIABLE = "production_value"
 [vars]
 ALLOWED_ORIGIN = "https://hemvip.github.io"
+ALLOWED_ORIGIN2 = "https://hemvip.pages.dev"
 ENVIRONMENT = "production"
 NODE_VERSION = "22.14.0"
 

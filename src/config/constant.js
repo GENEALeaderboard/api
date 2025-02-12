@@ -1,0 +1,28 @@
+export const firstPage = {
+	id: 0,
+	type: "generic",
+	name: "Pairwise Comparison of Gesture Generation AI Model Studies",
+	question: "",
+	selected: "",
+	actions: "",
+	options: "",
+	system1: "NA",
+	system2: "SB",
+	video1: 0,
+	video2: 0,
+	studyid: 0,
+}
+export const lastPage = {
+	id: 0,
+	type: "finish",
+	name: "Pairwise Comparison of Gesture Generation AI Model Studies",
+	question: "",
+	selected: "",
+	actions: "",
+	options: "",
+	system1: "NA",
+	system2: "SB",
+	video1: 0,
+	video2: 0,
+	studyid: 0,
+}

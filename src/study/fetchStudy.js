@@ -1,3 +1,4 @@
+import { firstPage, lastPage } from "@/config/constant"
 import { responseError, responseFailed, responseSuccess } from "../response"
 import { z } from "zod"
 
@@ -10,26 +11,41 @@ const studySchema = z.object({
 export async function fetchStudy(request, db, corsHeaders) {
 	try {
 		const url = new URL(request.url)
+		console.log("url", JSON.stringify(url))
 		const prolific_userid = url.searchParams.get("prolificid") || ""
 		const prolific_studyid = url.searchParams.get("studyid") || ""
 		const prolific_sessionid = url.searchParams.get("sessionid") || ""
+		const studyid = url.searchParams.get("code") || ""
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
 		if (!parseResult.success) {
+			console.log("prolific_userid", prolific_userid, "prolific_studyid", prolific_studyid, "prolific_sessionid", prolific_sessionid)
 			return responseFailed(null, "Failed to parse prolificid, studyid, sessionid", 400, corsHeaders)
 		}
 
-		const study = await db.prepare("SELECT * FROM studies WHERE status = 'new' OR status = 'uncomplete' ").first()
+		const { results } = await db.prepare("SELECT * FROM studies WHERE status = 'started' AND id =? ").bind(studyid).run()
 
-		if (!study || study.length === 0) {
+		if (!results || results.length === 0) {
 			return responseFailed(null, "No studies found", 404, corsHeaders)
 		}
+		const study = results[0]
 
 		const pages = await fetchPagesForStudy(db, study.id)
+		if (!pages || pages.length === 0) {
+			console.log("pages", JSON.stringify(pages))
+			return responseFailed(null, "No pages found", 404, corsHeaders)
+		}
 		const pagesWithVideos = await fetchVideosForPages(db, pages)
+		if (!pagesWithVideos || pagesWithVideos.length === 0) {
+			console.log("pagesWithVideos", JSON.stringify(pagesWithVideos))
+			return responseFailed(null, "No videos found", 404, corsHeaders)
+		}
+
+		pagesWithVideos.unshift(firstPage)
+		pagesWithVideos.push(lastPage)
 
 		return responseSuccess(
 			{
-				...study,
+				study: study,
 				pages: pagesWithVideos,
 			},
 			"Fetch studies success",
