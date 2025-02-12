@@ -7,25 +7,41 @@ const studySchema = z.object({
 	prolific_sessionid: z.string().regex(/^[a-zA-Z0-9]+$/, { message: "Invalid SESSION_ID format" }),
 })
 
-export async function fetchStudy(request, db, corsHeaders) {
+export async function updateAttentionCheck(request, db, corsHeaders) {
 	try {
-		const url = new URL(request.url)
-		const prolific_userid = url.searchParams.get("prolificid") || ""
-		const prolific_studyid = url.searchParams.get("studyid") || ""
-		const prolific_sessionid = url.searchParams.get("sessionid") || ""
+		const { prolificid: prolific_userid, studyid: prolific_studyid, sessionid: prolific_sessionid } = await request.json()
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
 		if (!parseResult.success) {
 			return responseFailed(null, "Failed to parse prolificid, studyid, sessionid", 400, corsHeaders)
 		}
 
-		const study = await db.prepare("SELECT * FROM studies WHERE status = 'new' OR status = 'uncomplete' ").first()
+		const study = await db.prepare("SELECT * FROM studies WHERE status = 'new' OR status = 'uncomplete'").first()
 
 		if (!study || study.length === 0) {
 			return responseFailed(null, "No studies found", 404, corsHeaders)
 		}
+		const res = await db
+			.prepare(
+				`UPDATE studies
+			SET status = 'started', prolific_userid = ?, prolific_studyid = ?, prolific_sessionid = ?
+			WHERE id = ?`
+			)
+			.bind(prolific_userid, prolific_studyid, prolific_sessionid, study.id)
+			.run()
+		if (!res) {
+			console.log("Response", res)
+			return responseFailed(null, "Failed to update study", 404, corsHeaders)
+		}
 
 		const pages = await fetchPagesForStudy(db, study.id)
+		if (!pages) {
+			return responseFailed(null, "Failed to fetch pages", 404, corsHeaders)
+		}
+
 		const pagesWithVideos = await fetchVideosForPages(db, pages)
+		if (!pagesWithVideos) {
+			return responseFailed(null, "Failed to fetch videos", 404, corsHeaders)
+		}
 
 		return responseSuccess(
 			{

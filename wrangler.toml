@@ -20,9 +20,9 @@ workers_dev = true
 # [vars]
 # MY_VARIABLE = "production_value"
 [vars]
-API_URL = "https://api.example.com"
 ALLOWED_ORIGIN = "https://hemvip.github.io"
 ENVIRONMENT = "production"
+NODE_VERSION = "22.14.0"
 
 
 [dev]

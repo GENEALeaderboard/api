@@ -1,5 +1,8 @@
 import { responseError, responseFailed } from "./response"
+import { updateAttentionCheck } from "./study/updateAttentionCheck"
 import { fetchStudy } from "./study/fetchStudy"
+import { finishStudy } from "./study/finishStudy"
+import { startStudy } from "./study/startStudy"
 // import { updateAttentionCheck } from "./studies/updateAttentionCheck";
 
 export default {
@@ -43,8 +46,12 @@ export default {
 					}
 				} else if (menthod === "POST") {
 					switch (path) {
-						// case '/api/studies':
-						// 	return insertStudies(request, db, corsHeaders);
+						case "/api/start-study":
+							return startStudy(request, db, corsHeaders)
+						case "/api/attention-check":
+							return updateAttentionCheck(request, db, corsHeaders)
+						case "/api/finish-study":
+							return finishStudy(request, db, corsHeaders)
 						default:
 							return responseFailed(null, "Invalid api", 404, corsHeaders)
 					}
