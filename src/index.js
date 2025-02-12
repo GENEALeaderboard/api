@@ -1,127 +1,61 @@
-import { z } from "zod"
-import * as Realm from 'realm-web';
-import {
-	toError,
-	addCORS,
-	responseError,
-	responseJSON,
-} from "./utils"
-import { startStudy } from "./studies/startStudy";
-import { fetchStudies } from "./studies/fetchStudies";
-import { handleOptions } from "./handleOptions"
-import { finishStudy } from "./studies/finishStudy";
-import { updateAttentionCheck } from "./studies/updateAttentionCheck";
-
-let App;
-const ObjectId = Realm.BSON.ObjectID;
+import { responseError, responseFailed } from "./response"
+import { fetchStudy } from "./study/fetchStudy"
+// import { updateAttentionCheck } from "./studies/updateAttentionCheck";
 
 export default {
 	async fetch(request, env, ctx) {
+		const corsHeaders = {
+			"Access-Control-Allow-Origin": env.ALLOWED_ORIGIN,
+			"Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS, PATCH",
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Credentials": "true",
+			"Access-Control-Max-Age": "86400",
+		}
+
 		if (request.method === "OPTIONS") {
 			// Handle CORS preflight requests
-			return handleOptions(request);
+			return new Response(null, { headers: corsHeaders })
 		}
 
-		const url = new URL(request.url);
-		App = App || new Realm.App(env.ATLAS_APPID);
-		const method = request.method;
-		const path = url.pathname.replace(/[/]$/, '');
-
-		if (path !== '/api/studies' && path !== '/api/study/finish' && path !== '/api/attention-check') {
-			return responseError(`Unknown '${path}' URL; try '/api/studies' instead.`, 404);
-		}
-
-		// const token = request.headers.get('authorization');
-		const token = "XnabV4Pa2RV6lgyJAj0uAun6X5KM6p0yJceHEm3EJ80757sasEjpP2smYNJaSkcv"
-		if (!token)
-			return responseError(`Missing 'authorization' header; try to add the header 'authorization: ATLAS_APP_API_KEY'.`);
-		try {
-			const credentials = Realm.Credentials.apiKey(token);
-			// Attempt to authenticate
-			var user = await App.logIn(credentials);
-			var client = user.mongoClient('mongodb-atlas');
-		}
-		catch (err) {
-			return responseError('Error with authentication.', 500);
-		}
+		const url = new URL(request.url)
+		const path = url.pathname
+		const menthod = request.method
 
 		try {
-			// console.log("path", path)
-			// GET /api/studies
-			if (path === '/api/studies' && method === 'GET') {
-				console.log("FETCH STUDY")
-				const prolificid = url.searchParams.get('prolificid') || '';
-				const studyid = url.searchParams.get('studyid') || '';
-				const sessionid = url.searchParams.get('sessionid') || '';
+			if (url.pathname.startsWith("/api/")) {
+				// const isValid = await isValidateToken(request, env)
 
-				// console.log("prolificid", prolificid, "studyid", studyid, "sessionid", sessionid)
+				// if (!isValid) {
+				// 	return responseError(null, "Unauthorized", 401, corsHeaders)
+				// }
+				const db = env.DB_HEMVIP
+				if (!db) {
+					return responseError(null, "No database found", 404, corsHeaders)
+				}
 
-				const { errors, success, data, msg } = await fetchStudies(client, prolificid, studyid, sessionid)
-				// console.log(errors, success, data, msg)
-				return responseJSON({ errors, success, data, msg })
+				if (menthod === "GET") {
+					switch (path) {
+						case "/api/study":
+							return fetchStudy(request, db, corsHeaders)
+
+						default:
+							return responseFailed(null, "Invalid api", 404, corsHeaders)
+					}
+				} else if (menthod === "POST") {
+					switch (path) {
+						// case '/api/studies':
+						// 	return insertStudies(request, db, corsHeaders);
+						default:
+							return responseFailed(null, "Invalid api", 404, corsHeaders)
+					}
+				}
 			}
 
-			// POST /api/studies
-			if (path === '/api/studies' && method === 'POST') {
-				console.log("START STUDY")
-				const { prolificid, studyid, sessionid } = await request.json();
-
-				const { errors, success, data, msg } = await startStudy(client, prolificid, studyid, sessionid)
-
-				return responseJSON({ errors, success, data, msg })
-			}
-
-			// POST /api/studies/finish
-			if (path === '/api/study/finish' && method === 'POST') {
-				console.log("FINISH STUDY API")
-				const {
-					prolificid,
-					studyid,
-					sessionid,
-					actions,
-					screenActions,
-					studySelections,
-					code
-				} = await request.json()
-
-				const { errors, success, data, msg } = await finishStudy(client, prolificid,
-					studyid,
-					sessionid,
-					actions,
-					screenActions,
-					studySelections,
-					code)
-
-				return responseJSON({ errors, success, data, msg })
-			}
-
-			if (path === '/api/attention-check' && method === 'POST') {
-				console.log("ATTENTION CHECK")
-				const {
-					prolificid,
-					studyid,
-					sessionid
-				} = await request.json()
-
-				const { errors, success, data, msg } = await updateAttentionCheck(client, prolificid,
-					studyid,
-					sessionid)
-
-				return responseJSON({ errors, success, data, msg })
-			}
-
-			// unknown method
-			return responseError('Method not allowed.', 405);
-		}
-		catch (err) {
-			console.log(err)
-			return responseError({
-				errors: err,
-				success: false,
-				data: null,
-				msg: "Internal server error",
-			})
+			return responseError(null, "Invalid api", 404, corsHeaders)
+		} catch (err) {
+			const errorMessage = err.message || "An unknown error occurred"
+			console.log("Exception", err)
+			return responseError(err, errorMessage, 500, corsHeaders)
 		}
 	},
-
-};
+}
