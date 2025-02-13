@@ -18,8 +18,8 @@ export default {
 			"Access-Control-Max-Age": "86400",
 		}
 		if (origin && allowedOrigins.includes(origin)) {
-			corsHeaders["Access-Control-Allow-Origin"] = origin;
-		  }
+			corsHeaders["Access-Control-Allow-Origin"] = origin
+		}
 
 		if (request.method === "OPTIONS") {
 			console.log("go here OPTIONS")

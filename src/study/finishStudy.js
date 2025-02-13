@@ -9,97 +9,64 @@ const studySchema = z.object({
 
 export async function finishStudy(request, db, corsHeaders) {
 	try {
-		const {
-			prolificid: prolific_userid,
-			studyid: prolific_studyid,
-			sessionid: prolific_sessionid,
-			actions,
-			screenActions,
-			studySelections,
-			code,
-		} = await request.json()
+		const { prolific_userid, prolific_studyid, prolific_sessionid, studyid, global_actions, screenActions, studySelections } =
+			await request.json()
+
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
+
 		if (!parseResult.success) {
+			parseResult.error.errors.forEach((err) => {
+				console.error(`Validation error on ${err.path.join(".")}: ${err.message}`)
+			})
+
 			return responseFailed(null, "Failed to parse prolificid, studyid, sessionid", 400, corsHeaders)
 		}
-		const res = await db
+
+		const json_global_actions = JSON.stringify(global_actions)
+		const { results: updateStudyResp } = await db
 			.prepare(
 				`UPDATE studies
-			SET status = 'started', prolific_userid = ?, prolific_studyid = ?, prolific_sessionid = ?
-			WHERE id = ?`
+                SET status = 'finish', global_actions = ?
+                WHERE id = ? AND prolific_userid = ? AND prolific_studyid = ? AND prolific_sessionid = ?`
 			)
-			.bind(prolific_userid, prolific_studyid, prolific_sessionid, study.id)
+			.bind(json_global_actions, studyid, prolific_userid, prolific_studyid, prolific_sessionid)
 			.run()
-		if (!res) {
-			console.log("Response", res)
-			return responseFailed(null, "Failed to update study", 404, corsHeaders)
+
+		if (!updateStudyResp) {
+			console.log("Response", updateStudyResp)
+			return responseFailed(null, "Failed to complete study", 404, corsHeaders)
 		}
 
-		const pages = await fetchPagesForStudy(db, study.id)
-		if (!pages) {
-			return responseFailed(null, "Failed to fetch pages", 404, corsHeaders)
+		// ***************************
+		const stmtActions = db.prepare(`UPDATE pages SET actions = ? WHERE id = ? AND studyid = ?`)
+		const batchActions = Object.entries(screenActions).map(([pageid, actions]) => {
+			const json_screenActions = JSON.stringify(actions)
+			return stmtActions.bind(json_screenActions, pageid, studyid)
+		})
+
+		const respActions = await db.batch(batchActions)
+
+		if (!respActions || !respActions.every(result => result.success)) {
+            console.log("respActions", respActions);
+            return responseFailed(null, "Failed to update actions on pages", 404, corsHeaders);
+        }
+
+		// ***************************
+		const stmtSelect = db.prepare(`UPDATE pages SET selected = ? WHERE id = ? AND studyid = ?`)
+		const batchSelect = Object.entries(studySelections).map(([id, select]) => {
+			const json_screenSelect = JSON.stringify(select)
+			return stmtSelect.bind(json_screenSelect, id, studyid)
+		})
+
+		const respSelect = await db.batch(batchSelect)
+		if (!respSelect || !respSelect.every((result) => result.success)) {
+			console.log("respSelect", respSelect)
+			return responseFailed(null, "Failed to update selected on pages", 404, corsHeaders)
 		}
 
-		const pagesWithVideos = await fetchVideosForPages(db, pages)
-		if (!pagesWithVideos) {
-			return responseFailed(null, "Failed to fetch videos", 404, corsHeaders)
-		}
-
-		return responseSuccess(
-			{
-				...study,
-				pages: pagesWithVideos,
-			},
-			"Fetch studies success",
-			corsHeaders
-		)
+		return responseSuccess({}, "Finish the study success", corsHeaders)
 	} catch (err) {
 		console.error("Exception:", err)
 		return responseError(err, err.message || "An unknown error occurred", 500, corsHeaders)
 	}
-}
-
-async function fetchPagesForStudy(db, studyid) {
-	const { results: pages } = await db.prepare("SELECT * FROM pages WHERE studyid = ?").bind(studyid).run()
-
-	if (!pages || pages.length === 0) {
-		throw new Error("No pages found")
-	}
-
-	return pages
-}
-
-async function fetchVideosForPages(db, pages) {
-	// Extract unique video IDs from pages
-	const videoIds = [...new Set(pages.flatMap((page) => [page.video1, page.video2]))]
-
-	if (videoIds.length === 0) {
-		throw new Error("No video IDs found in pages")
-	}
-
-	// Fetch all videos in a single query
-	const { results: videoResults } = await db
-		.prepare(`SELECT * FROM videos WHERE id IN (${videoIds.map(() => "?").join(",")})`)
-		.bind(...videoIds)
-		.run()
-
-	if (!videoResults || videoResults.length === 0) {
-		throw new Error("No videos found")
-	}
-
-	// Create a video dictionary for quick lookup
-	const videoDict = videoResults.reduce((acc, video) => {
-		acc[video.id] = video
-		return acc
-	}, {})
-
-	// Map pages with their corresponding videos
-	const pagesWithVideos = pages.map((page) => ({
-		...page,
-		options: JSON.parse(JSON.parse(page.options)),
-		video1: videoDict[page.video1],
-		video2: videoDict[page.video2],
-	}))
-
-	return pagesWithVideos
 }
