@@ -17,12 +17,8 @@ export async function startStudy(request, db, corsHeaders) {
 
 		const study = await db.prepare("SELECT * FROM studies WHERE status = 'new' OR status = 'uncomplete'").first()
 
-		if (!study) {
-			return responseFailed({}, "No studies found", 404, corsHeaders)
-		}
-
-		if (study.length === 0) {
-			return responseSuccess({ state: "full" }, "All study is complete", 404, corsHeaders)
+		if (!study || study.length === 0) {
+			return responseSuccess({ state: "full" }, "All study is complete", 200, corsHeaders)
 		}
 
 		const res = await db
