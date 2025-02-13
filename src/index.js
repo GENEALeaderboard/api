@@ -22,7 +22,6 @@ export default {
 		}
 
 		if (request.method === "OPTIONS") {
-			console.log("go here OPTIONS")
 			// Handle CORS preflight requests
 			return new Response(null, { headers: corsHeaders })
 		}
