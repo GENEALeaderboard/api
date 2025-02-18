@@ -9,11 +9,11 @@
 		"test": "vitest"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.6.15",
+		"@cloudflare/vitest-pool-workers": "^0.6.16",
 		"zod": "^3.24.2",
-		"wrangler": "^3.109.0"
+		"wrangler": "^3.109.1"
 	},
 	"dependencies": {
-		"@cloudflare/workers-types": "^4.20250204.0"
+		"@cloudflare/workers-types": "^4.20250214.0"
 	}
 }

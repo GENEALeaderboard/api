@@ -10,6 +10,7 @@ const studySchema = z.object({
 export async function failedStudy(request, db, corsHeaders) {
 	try {
 		const { prolific_userid, prolific_studyid, prolific_sessionid, studyid, failedAttentionCheck } = await request.json()
+		console.log("failedAttentionCheck", failedAttentionCheck)
 
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
 
