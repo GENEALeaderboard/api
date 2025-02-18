@@ -92,12 +92,15 @@ async function fetchVideosForPages(db, pages) {
 	}, {})
 
 	// Map pages with their corresponding videos
-	const pagesWithVideos = pages.map((page) => ({
-		...page,
-		options: JSON.parse(JSON.parse(page.options)),
-		video1: videoDict[page.video1],
-		video2: videoDict[page.video2],
-	}))
+	const pagesWithVideos = pages.map((page) => {
+		const options = JSON.parse(page.options)
+		return {
+			...page,
+			options: options,
+			video1: videoDict[page.video1],
+			video2: videoDict[page.video2],
+		}
+	})
 
 	return pagesWithVideos
 }
