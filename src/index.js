@@ -58,6 +58,8 @@ export default {
 							return updateAttentionCheck(request, db, corsHeaders)
 						case "/api/finish-study":
 							return finishStudy(request, db, corsHeaders)
+						case "/api/failed-study":
+							return finishStudy(request, db, corsHeaders)
 						default:
 							return responseFailed(null, "Invalid api", 404, corsHeaders)
 					}

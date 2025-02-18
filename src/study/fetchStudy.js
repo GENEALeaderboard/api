@@ -32,7 +32,7 @@ export async function fetchStudy(request, db, corsHeaders) {
 		const pages = await fetchPagesForStudy(db, study.id)
 		if (!pages || pages.length === 0) {
 			console.log("pages", JSON.stringify(pages))
-			return responseFailed(null, "No pages found", 404, corsHeaders)
+			return responseFailed(null, `No pages found for ${study.id}`, 404, corsHeaders)
 		}
 		const pagesWithVideos = await fetchVideosForPages(db, pages)
 		if (!pagesWithVideos || pagesWithVideos.length === 0) {
