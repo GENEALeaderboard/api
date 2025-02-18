@@ -3,6 +3,7 @@ import { updateAttentionCheck } from "./study/updateAttentionCheck"
 import { fetchStudy } from "./study/fetchStudy"
 import { finishStudy } from "./study/finishStudy"
 import { startStudy } from "./study/startStudy"
+import { failedStudy } from "./study/failedStudy"
 // import { updateAttentionCheck } from "./studies/updateAttentionCheck";
 
 export default {
@@ -59,7 +60,7 @@ export default {
 						case "/api/finish-study":
 							return finishStudy(request, db, corsHeaders)
 						case "/api/failed-study":
-							return finishStudy(request, db, corsHeaders)
+							return failedStudy(request, db, corsHeaders)
 						default:
 							return responseFailed(null, "Invalid api", 404, corsHeaders)
 					}
