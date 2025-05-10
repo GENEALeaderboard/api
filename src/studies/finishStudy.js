@@ -12,7 +12,7 @@ const studySchema = z.object({
 		.regex(/^[a-zA-Z0-9]+$/, { message: "Invalid SESSION_ID format" }),
 })
 
-export async function finishStudy(client, prolificid, studyid, sessionid, actions, screenActions, studySelections, code) {
+export async function finishStudy(client, prolificid, studyid, sessionid, actions, screenActions, studySelections, juiceOptions, juiceOtherReason, code) {
 	try {
 		// Use Zod to validate the received data against the UserSchema
 		const result = studySchema.safeParse({ prolificid, studyid, sessionid })
@@ -33,6 +33,8 @@ export async function finishStudy(client, prolificid, studyid, sessionid, action
 				return {
 					actions: screenActions[index],
 					selected: studySelections[index],
+					juiceOptions: juiceOptions[index],
+					juiceOtherReason: juiceOtherReason[index],
 					...page,
 				}
 			})

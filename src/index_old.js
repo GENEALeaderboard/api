@@ -63,6 +63,8 @@ async fetch(request, env, ctx) {
 				actions,
 				screenActions,
 				studySelections,
+				juiceOptions,
+				juiceOtherReason,
 				code
 			} = await request.json()
 
@@ -72,6 +74,8 @@ async fetch(request, env, ctx) {
 				actions,
 				screenActions,
 				studySelections,
+				juiceOptions,
+				juiceOtherReason,
 				code)
 
 			return responseJSON({ errors, success, data, msg })
