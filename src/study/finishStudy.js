@@ -9,7 +9,7 @@ const studySchema = z.object({
 
 export async function finishStudy(request, db, corsHeaders) {
 	try {
-		const { prolific_userid, prolific_studyid, prolific_sessionid, studyid, global_actions, screenActions, studySelections } =
+		const { prolific_userid, prolific_studyid, prolific_sessionid, studyid, global_actions, screenActions, studySelections, juiceOptions, juiceOtherReason } =
 			await request.json()
 
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
@@ -62,6 +62,32 @@ export async function finishStudy(request, db, corsHeaders) {
 		if (!respSelect || !respSelect.every((result) => result.success)) {
 			console.log("respSelect", respSelect)
 			return responseFailed(null, "Failed to update selected on pages", 404, corsHeaders)
+		}
+
+		// ***************************
+		const stmtJuice = db.prepare(`UPDATE pages SET juiceOptions = ? WHERE id = ? AND studyid = ?`)
+		const batchJuice = Object.entries(juiceOptions).map(([id, juice]) => {
+			const json_screenJuice = JSON.stringify(juice)
+			return stmtJuice.bind(json_screenJuice, id, studyid)
+		})
+
+		const respJuice = await db.batch(batchJuice)
+		if (!respJuice || !respJuice.every((result) => result.success)) {
+			console.log("respJuice", respJuice)
+			return responseFailed(null, "Failed to update juiceOptions on pages", 404, corsHeaders)
+		}
+
+		// ***************************
+		const stmtJuiceOther = db.prepare(`UPDATE pages SET juiceOtherReason = ? WHERE id = ? AND studyid = ?`)
+		const batchJuiceOther = Object.entries(juiceOtherReason).map(([id, juice]) => {
+			const json_screenJuiceOther = JSON.stringify(juice)
+			return stmtJuiceOther.bind(json_screenJuiceOther, id, studyid)
+		})
+		
+		const respJuiceOther = await db.batch(batchJuiceOther)
+		if (!respJuiceOther || !respJuiceOther.every((result) => result.success)) {
+			console.log("respJuiceOther", respJuiceOther)
+			return responseFailed(null, "Failed to update juiceOtherReason on pages", 404, corsHeaders)
 		}
 
 		return responseSuccess({}, "Finish the study success", corsHeaders)
