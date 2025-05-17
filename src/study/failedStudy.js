@@ -9,8 +9,7 @@ const studySchema = z.object({
 
 export async function failedStudy(request, db, corsHeaders) {
 	try {
-		const { prolific_userid, prolific_studyid, prolific_sessionid, studyid, failedAttentionCheck } = await request.json()
-		console.log("failedAttentionCheck", failedAttentionCheck)
+		const { prolific_userid, prolific_studyid, prolific_sessionid, studyid, failedAttentionCheck, skippedPages } = await request.json()
 
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
 
@@ -22,14 +21,15 @@ export async function failedStudy(request, db, corsHeaders) {
 			return responseFailed(null, "Failed to parse prolificid, studyid, sessionid", 400, corsHeaders)
 		}
 
-		const failed_attention_check = JSON.stringify(failedAttentionCheck)
+		const json_failed_attention_check = JSON.stringify(failedAttentionCheck)
+		const json_skipped_pages = skippedPages ? JSON.stringify(skippedPages) : JSON.stringify([])
 		const { results: rsFailedUpdate } = await db
 			.prepare(
 				`UPDATE studies
-                SET status = 'failed', failed_attention_check = ?
+                SET status = 'failed', failed_attention_check = ?, skipped_pages = ?
                 WHERE id = ? AND prolific_userid = ? AND prolific_studyid = ? AND prolific_sessionid = ?`
 			)
-			.bind(failed_attention_check, studyid, prolific_userid, prolific_studyid, prolific_sessionid)
+			.bind(json_failed_attention_check, json_skipped_pages, studyid, prolific_userid, prolific_studyid, prolific_sessionid)
 			.run()
 
 		if (!rsFailedUpdate) {

@@ -9,7 +9,7 @@ const studySchema = z.object({
 
 export async function finishStudy(request, db, corsHeaders) {
 	try {
-		const { prolific_userid, prolific_studyid, prolific_sessionid, studyid, global_actions, screenActions, studySelections, juiceOptions, juiceOtherReason } =
+		const { prolific_userid, prolific_studyid, prolific_sessionid, studyid, global_actions, screenActions, studySelections, juiceOptions, juiceOtherReason, failedAttentionCheck, skippedPages } =
 			await request.json()
 
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
@@ -23,13 +23,15 @@ export async function finishStudy(request, db, corsHeaders) {
 		}
 
 		const json_global_actions = JSON.stringify(global_actions)
+		const json_failed_attention_check = JSON.stringify(failedAttentionCheck)
+		const json_skipped_pages = skippedPages ? JSON.stringify(skippedPages) : JSON.stringify([])
 		const { results: updateStudyResp } = await db
 			.prepare(
 				`UPDATE studies
-                SET status = 'finish', global_actions = ?
+                SET status = 'finish', global_actions = ?, failed_attention_check = ?, skipped_pages = ?
                 WHERE id = ? AND prolific_userid = ? AND prolific_studyid = ? AND prolific_sessionid = ?`
 			)
-			.bind(json_global_actions, studyid, prolific_userid, prolific_studyid, prolific_sessionid)
+			.bind(json_global_actions, json_failed_attention_check, json_skipped_pages, studyid, prolific_userid, prolific_studyid, prolific_sessionid)
 			.run()
 
 		if (!updateStudyResp) {
@@ -47,9 +49,9 @@ export async function finishStudy(request, db, corsHeaders) {
 		const respActions = await db.batch(batchActions)
 
 		if (!respActions || !respActions.every(result => result.success)) {
-            console.log("respActions", respActions);
-            return responseFailed(null, "Failed to update actions on pages", 404, corsHeaders);
-        }
+			console.log("respActions", respActions);
+			return responseFailed(null, "Failed to update actions on pages", 404, corsHeaders);
+		}
 
 		// ***************************
 		const stmtSelect = db.prepare(`UPDATE pages SET selected = ? WHERE id = ? AND studyid = ?`)
@@ -83,7 +85,7 @@ export async function finishStudy(request, db, corsHeaders) {
 			const json_screenJuiceOther = JSON.stringify(juice)
 			return stmtJuiceOther.bind(json_screenJuiceOther, id, studyid)
 		})
-		
+
 		const respJuiceOther = await db.batch(batchJuiceOther)
 		if (!respJuiceOther || !respJuiceOther.every((result) => result.success)) {
 			console.log("respJuiceOther", respJuiceOther)
