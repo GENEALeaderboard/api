@@ -37,7 +37,7 @@ export async function failedStudy(request, db, corsHeaders) {
 			return responseFailed(null, "Failed to complete study", 404, corsHeaders)
 		}
 
-		return responseSuccess({}, "Your study is uncomplete because of failed attention check", corsHeaders)
+		return responseSuccess({}, "Your study was terminated due to too many failed attention checks.", corsHeaders)
 	} catch (err) {
 		console.error("Exception:", err)
 		return responseError(err, err.message || "An unknown error occurred", 500, corsHeaders)
