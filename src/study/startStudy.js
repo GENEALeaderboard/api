@@ -9,13 +9,20 @@ const studySchema = z.object({
 
 export async function startStudy(request, db, corsHeaders) {
 	try {
-		const { prolificid: prolific_userid, studyid: prolific_studyid, sessionid: prolific_sessionid } = await request.json()
+		const { prolificid: prolific_userid, studyid: prolific_studyid, sessionid: prolific_sessionid, type } = await request.json()
 		const parseResult = studySchema.safeParse({ prolific_userid, prolific_studyid, prolific_sessionid })
 		if (!parseResult.success) {
 			return responseFailed({}, "Failed to parse prolificid, studyid, sessionid", 400, corsHeaders)
 		}
 
-		const study = await db.prepare("SELECT * FROM studies WHERE status = 'new' OR status = 'uncomplete'").first()
+		// When the participant picked a study type, assign one of that type;
+		// otherwise fall back to the first assignable study (legacy behavior).
+		const study = type
+			? await db
+					.prepare("SELECT * FROM studies WHERE (status = 'new' OR status = 'uncomplete') AND type = ?")
+					.bind(type)
+					.first()
+			: await db.prepare("SELECT * FROM studies WHERE status = 'new' OR status = 'uncomplete'").first()
 
 		if (!study || study.length === 0) {
 			return responseSuccess({ state: "full" }, "All study is complete", corsHeaders)

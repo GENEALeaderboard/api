@@ -1,6 +1,7 @@
 import { responseError, responseFailed } from "./response"
 import { updateAttentionCheck } from "./study/updateAttentionCheck"
 import { fetchStudy } from "./study/fetchStudy"
+import { fetchStudyTypes } from "./study/fetchStudyTypes"
 import { finishStudy } from "./study/finishStudy"
 import { startStudy } from "./study/startStudy"
 import { failedStudy } from "./study/failedStudy"
@@ -47,6 +48,8 @@ export default {
 					switch (path) {
 						case "/api/study":
 							return fetchStudy(request, db, corsHeaders)
+						case "/api/study-types":
+							return fetchStudyTypes(request, db, corsHeaders)
 
 						default:
 							return responseFailed(null, "Invalid api", 404, corsHeaders)
