@@ -46,11 +46,16 @@ export async function finishStudy(request, db, corsHeaders) {
 			return stmtActions.bind(json_screenActions, pageid, studyid)
 		})
 
-		const respActions = await db.batch(batchActions)
+		// D1's db.batch() throws on an empty array, so skip the write when there is
+		// nothing to persist. This happens legitimately e.g. for the semantic study,
+		// which has no JUICE board, so juiceOptions/juiceOtherReason arrive empty.
+		if (batchActions.length) {
+			const respActions = await db.batch(batchActions)
 
-		if (!respActions || !respActions.every(result => result.success)) {
-			console.log("respActions", respActions);
-			return responseFailed(null, "Failed to update actions on pages", 404, corsHeaders);
+			if (!respActions || !respActions.every(result => result.success)) {
+				console.log("respActions", respActions);
+				return responseFailed(null, "Failed to update actions on pages", 404, corsHeaders);
+			}
 		}
 
 		// ***************************
@@ -60,10 +65,12 @@ export async function finishStudy(request, db, corsHeaders) {
 			return stmtSelect.bind(json_screenSelect, id, studyid)
 		})
 
-		const respSelect = await db.batch(batchSelect)
-		if (!respSelect || !respSelect.every((result) => result.success)) {
-			console.log("respSelect", respSelect)
-			return responseFailed(null, "Failed to update selected on pages", 404, corsHeaders)
+		if (batchSelect.length) {
+			const respSelect = await db.batch(batchSelect)
+			if (!respSelect || !respSelect.every((result) => result.success)) {
+				console.log("respSelect", respSelect)
+				return responseFailed(null, "Failed to update selected on pages", 404, corsHeaders)
+			}
 		}
 
 		// ***************************
@@ -73,10 +80,12 @@ export async function finishStudy(request, db, corsHeaders) {
 			return stmtJuice.bind(json_screenJuice, id, studyid)
 		})
 
-		const respJuice = await db.batch(batchJuice)
-		if (!respJuice || !respJuice.every((result) => result.success)) {
-			console.log("respJuice", respJuice)
-			return responseFailed(null, "Failed to update juiceOptions on pages", 404, corsHeaders)
+		if (batchJuice.length) {
+			const respJuice = await db.batch(batchJuice)
+			if (!respJuice || !respJuice.every((result) => result.success)) {
+				console.log("respJuice", respJuice)
+				return responseFailed(null, "Failed to update juiceOptions on pages", 404, corsHeaders)
+			}
 		}
 
 		// ***************************
@@ -86,10 +95,12 @@ export async function finishStudy(request, db, corsHeaders) {
 			return stmtJuiceOther.bind(json_screenJuiceOther, id, studyid)
 		})
 
-		const respJuiceOther = await db.batch(batchJuiceOther)
-		if (!respJuiceOther || !respJuiceOther.every((result) => result.success)) {
-			console.log("respJuiceOther", respJuiceOther)
-			return responseFailed(null, "Failed to update juiceOtherReason on pages", 404, corsHeaders)
+		if (batchJuiceOther.length) {
+			const respJuiceOther = await db.batch(batchJuiceOther)
+			if (!respJuiceOther || !respJuiceOther.every((result) => result.success)) {
+				console.log("respJuiceOther", respJuiceOther)
+				return responseFailed(null, "Failed to update juiceOtherReason on pages", 404, corsHeaders)
+			}
 		}
 
 		return responseSuccess({}, "Finish the study success", corsHeaders)
